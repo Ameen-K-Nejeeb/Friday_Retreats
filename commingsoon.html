@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friday Retreats | Exclusive Kerala Escapes - Coming Soon</title>
+    
+    <!-- Tailwind CSS CDN for instant styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom CSS for animations -->
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+        /* Ensure the input placeholder is styled correctly */
+        ::placeholder {
+            color: #9ca3af;
+            opacity: 1;
+            font-weight: 400;
+        }
+        /* Subtle glow for the logo */
+        .logo-glow {
+            box-shadow: 0 0 30px rgba(245, 230, 211, 0.15);
+        }
+    </style>
+</head>
+<body class="min-h-screen relative flex flex-col items-center justify-center overflow-hidden font-sans bg-gray-900 m-0">
+
+    <!-- Background Image with Overlay -->
+    <div 
+        class="absolute inset-0 z-0 bg-cover bg-center transition-transform duration-[12s] ease-in-out hover:scale-110"
+        style="background-image: url('https://images.unsplash.com/photo-1593693397690-362cb9666fc2?auto=format&fit=crop&q=80&w=2000');"
+    >
+        <!-- Deep maroon gradient overlay matching the brand palette -->
+        <div class="absolute inset-0 bg-gradient-to-b from-black/80 via-[#4a1523]/80 to-[#6b1e32]/95 z-0"></div>
+    </div>
+
+    <!-- Content Container -->
+    <div class="relative z-10 flex flex-col items-center justify-center w-full px-6 text-center text-white md:px-12 animate-fade-in-up">
+        
+        <!-- Custom Brand Logo Container -->
+        <div class="flex items-center justify-center w-20 h-20 mb-8 bg-[#fdfbf7] rounded-full logo-glow hover:scale-105 transition-transform duration-500 border border-white/20">
+            <!-- Referencing your shared image -->
+            <img src="fr_logo.png" alt="Friday Retreats Logo" class="w-12 h-12 object-contain" />
+        </div>
+
+        <!-- Website URL -->
+        <h1 class="text-sm md:text-base font-bold tracking-[0.4em] uppercase mb-4 text-[#e6d5b8] drop-shadow-md">
+            fridayretreats.com
+        </h1>
+        
+        <h2 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight drop-shadow-2xl">
+            Bespoke Escapes, <br />
+            <span class="text-[#f5e6d3] italic font-serif font-medium text-4xl md:text-6xl">Immaculately Crafted.</span>
+        </h2>
+        
+        <p class="max-w-2xl mb-12 text-lg text-gray-200 md:text-xl font-light leading-relaxed drop-shadow-md">
+            We are meticulously designing an exclusive gateway to the untold beauty of Kerala. From the whispering backwaters to the mist-draped peaks of Idukki, your ultimate sanctuary of luxury and absolute tranquility awaits.
+        </p>
+
+        <!-- Glassmorphism Notification Form -->
+        <div class="w-full max-w-md p-8 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
+            
+            <!-- Success Message (Hidden by default) -->
+            <div id="success-message" class="hidden text-[#f5e6d3] font-medium text-lg py-3 animate-fade-in-up">
+                Welcome to the inner circle. <br/><span class="text-sm font-light text-gray-300">You are on the exclusive waitlist for our grand unveiling.</span>
+            </div>
+
+            <!-- Email Form -->
+            <form id="notify-form" class="flex flex-col gap-4 sm:flex-row">
+                <input
+                    type="email"
+                    id="email-input"
+                    placeholder="Enter email for VIP access..."
+                    required
+                    class="w-full px-5 py-3.5 text-gray-900 bg-[#fdfbf7] rounded-xl focus:outline-none focus:ring-4 focus:ring-[#6b1e32]/70 font-medium transition-all shadow-inner"
+                />
+                <button 
+                    type="submit"
+                    class="w-full sm:w-auto px-6 py-3.5 font-bold tracking-wide text-[#6b1e32] uppercase text-sm transition-all duration-300 bg-[#f5e6d3] hover:bg-white rounded-xl shadow-[0_4px_14px_0_rgba(245,230,211,0.39)] hover:shadow-[0_6px_20px_rgba(245,230,211,0.23)] hover:-translate-y-1"
+                >
+                    Request Invite
+                </button>
+            </form>
+        </div>
+
+        <!-- Subtle Location Hint (Inline SVG Map Pin) -->
+        <div class="flex items-center gap-2 mt-24 text-sm font-medium tracking-[0.2em] text-gray-400 uppercase opacity-70 hover:opacity-100 transition-opacity duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span>Kerala, India</span>
+        </div>
+    </div>
+
+    <!-- JavaScript to handle form submission -->
+    <script>
+        document.getElementById('notify-form').addEventListener('submit', function(e) {
+            e.preventDefault(); 
+            const email = document.getElementById('email-input').value;
+            
+            if(email) {
+                // Fade out the form for a smoother transition
+                const form = document.getElementById('notify-form');
+                form.style.opacity = '0';
+                
+                setTimeout(() => {
+                    form.classList.add('hidden');
+                    // Show the success message
+                    document.getElementById('success-message').classList.remove('hidden');
+                }, 300);
+            }
+        });
+    </script>
+</body>
+</html>
