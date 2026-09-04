@@ -1,122 +1,315 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Friday Retreats | Exclusive Kerala Escapes - Coming Soon</title>
-    
-    <!-- Tailwind CSS CDN for instant styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Custom CSS for animations -->
-    <style>
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up {
-            animation: fadeInUp 0.8s ease-out forwards;
-        }
-        /* Ensure the input placeholder is styled correctly */
-        ::placeholder {
-            color: #9ca3af;
-            opacity: 1;
-            font-weight: 400;
-        }
-        /* Subtle glow for the logo */
-        .logo-glow {
-            box-shadow: 0 0 30px rgba(245, 230, 211, 0.15);
-        }
-    </style>
-</head>
-<body class="min-h-screen relative flex flex-col items-center justify-center overflow-hidden font-sans bg-gray-900 m-0">
 
-    <!-- Background Image with Overlay -->
-    <div 
-        class="absolute inset-0 z-0 bg-cover bg-center transition-transform duration-[12s] ease-in-out hover:scale-110"
-        style="background-image: url('https://images.unsplash.com/photo-1593693397690-362cb9666fc2?auto=format&fit=crop&q=80&w=2000');"
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+      :root {
+        --primary: #5e1718;
+        --accent: #852a28;
+        --bg: #fdfbfb;
+        --whatsapp-green: #25d366;
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fadeInUp 0.8s ease-out forwards;
+      }
+
+      .logo-glow {
+        box-shadow: 0 0 30px rgba(245, 230, 211, 0.15);
+      }
+
+      /* Custom form styling */
+      .form-card {
+        background: rgba(253, 251, 251, 0.96);
+        backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
+      }
+
+      .form-input {
+        width: 100%;
+        background-color: #faf7f7;
+        border: 1px solid #e8dfdf;
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-size: 14px;
+        color: #2d1515;
+        outline: none;
+        transition: all 0.2s ease-in-out;
+      }
+
+      .form-input::placeholder {
+        color: #8c7878;
+      }
+
+      .form-input:focus {
+        border-color: var(--accent);
+        background-color: #ffffff;
+        box-shadow: 0 0 0 3px rgba(133, 42, 40, 0.15);
+      }
+
+      .divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 16px 0;
+        color: #8c7878;
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        font-weight: 700;
+      }
+
+      .divider::before,
+      .divider::after {
+        content: "";
+        flex: 1;
+        border-bottom: 1px solid #e8dfdf;
+      }
+
+      .divider span {
+        padding: 0 10px;
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen relative flex items-center justify-center font-sans bg-gray-900 m-0 py-12 px-6 lg:px-16 overflow-x-hidden"
+  >
+    <div
+      class="fixed inset-0 z-0 bg-cover bg-center transition-transform duration-[14s] ease-in-out hover:scale-105"
+      style="
+        background-image: url(&quot;https://images.unsplash.com/photo-1593693397690-362cb9666fc2?auto=format&fit=crop&q=80&w=2000&quot;);
+      "
     >
-        <!-- Deep maroon gradient overlay matching the brand palette -->
-        <div class="absolute inset-0 bg-gradient-to-b from-black/80 via-[#4a1523]/80 to-[#6b1e32]/95 z-0"></div>
+      <div
+        class="absolute inset-0 bg-gradient-to-b from-black/85 via-[#4a1523]/85 to-[#5e1718]/95 z-0"
+      ></div>
     </div>
 
-    <!-- Content Container -->
-    <div class="relative z-10 flex flex-col items-center justify-center w-full px-6 text-center text-white md:px-12 animate-fade-in-up">
-        
-        <!-- Custom Brand Logo Container -->
-        <div class="flex items-center justify-center w-20 h-20 mb-8 bg-[#fdfbf7] rounded-full logo-glow hover:scale-105 transition-transform duration-500 border border-white/20">
-            <!-- Referencing your shared image -->
-            <img src="fr_logo.png" alt="Friday Retreats Logo" class="w-12 h-12 object-contain" />
+    <div
+      class="relative z-10 w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center animate-fade-in-up my-auto"
+    >
+      <div
+        class="lg:col-span-7 flex flex-col items-center text-center text-white"
+      >
+        <div
+          class="flex items-center justify-center w-20 h-20 mb-6 bg-[#fdfbf7] rounded-full logo-glow hover:scale-105 transition-transform duration-500 border border-white/20"
+        >
+          <img
+            src="fr_logo.png"
+            alt="Friday Retreats Logo"
+            class="w-12 h-12 object-contain"
+          />
         </div>
 
-        <!-- Website URL -->
-        <h1 class="text-sm md:text-base font-bold tracking-[0.4em] uppercase mb-4 text-[#e6d5b8] drop-shadow-md">
-            fridayretreats.com
+        <h1
+          class="text-sm md:text-base font-bold tracking-[0.4em] uppercase mb-4 text-[#e6d5b8] drop-shadow-md"
+        >
+          fridayretreats.com
         </h1>
-        
-        <h2 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight drop-shadow-2xl">
-            Bespoke Escapes, <br />
-            <span class="text-[#f5e6d3] italic font-serif font-medium text-4xl md:text-6xl">Immaculately Crafted.</span>
+
+        <h2
+          class="text-4xl sm:text-5xl xl:text-6xl font-extrabold tracking-tight mb-6 leading-tight drop-shadow-2xl"
+        >
+          Bespoke Escapes, <br />
+          <span
+            class="text-[#f5e6d3] italic font-serif font-medium text-3xl sm:text-4xl xl:text-5xl"
+            >Immaculately Crafted.</span
+          >
         </h2>
-        
-        <p class="max-w-2xl mb-12 text-lg text-gray-200 md:text-xl font-light leading-relaxed drop-shadow-md">
-            We are meticulously designing an exclusive gateway to the untold beauty of Kerala. From the whispering backwaters to the mist-draped peaks of Idukki, your ultimate sanctuary of luxury and absolute tranquility awaits.
+
+        <p
+          class="max-w-xl mb-8 text-base sm:text-lg text-gray-200 font-light leading-relaxed drop-shadow-md"
+        >
+          We are meticulously designing an exclusive gateway to the untold
+          beauty of Kerala. From whispering backwaters to mist-draped peaks,
+          your sanctuary of luxury and absolute tranquility awaits.
         </p>
 
-        <!-- Glassmorphism Notification Form -->
-        <div class="w-full max-w-md p-8 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
-            
-            <!-- Success Message (Hidden by default) -->
-            <div id="success-message" class="hidden text-[#f5e6d3] font-medium text-lg py-3 animate-fade-in-up">
-                Welcome to the inner circle. <br/><span class="text-sm font-light text-gray-300">You are on the exclusive waitlist for our grand unveiling.</span>
+        <div
+          class="flex items-center gap-2 text-sm font-medium tracking-[0.2em] text-gray-400 uppercase opacity-80"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <span>Kerala, India</span>
+        </div>
+      </div>
+
+      <div class="lg:col-span-5 flex justify-center lg:justify-end w-full">
+        <div class="w-full max-w-md p-6 sm:p-8 form-card rounded-2xl text-left">
+          <h3 class="text-xl font-bold text-[#5E1718] text-center mb-6">
+            Send us a
+            <span class="border-b-2 border-[#852A28] pb-0.5"
+              >quick enquiry</span
+            >
+          </h3>
+
+          <!-- Web3Forms Form Tag -->
+          <form
+            id="enquiryForm"
+            action="https://api.web3forms.com/submit"
+            method="POST"
+            class="space-y-3.5"
+          >
+            <!-- Replace YOUR_ACCESS_KEY_HERE with the key Web3Forms sends to your email -->
+            <input
+              type="hidden"
+              name="access_key"
+              value="YOUR_ACCESS_KEY_HERE"
+            />
+
+            <!-- Optional customizations -->
+            <input
+              type="hidden"
+              name="subject"
+              value="New Quick Enquiry - Friday Retreats"
+            />
+            <input
+              type="hidden"
+              name="from_name"
+              value="Friday Retreats Website"
+            />
+            <input
+              type="checkbox"
+              name="botcheck"
+              class="hidden"
+              style="display: none"
+            />
+
+            <div>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                placeholder="👤 Your Name *"
+                required
+                class="form-input"
+              />
             </div>
 
-            <!-- Email Form -->
-            <form id="notify-form" class="flex flex-col gap-4 sm:flex-row">
-                <input
-                    type="email"
-                    id="email-input"
-                    placeholder="Enter email for VIP access..."
-                    required
-                    class="w-full px-5 py-3.5 text-gray-900 bg-[#fdfbf7] rounded-xl focus:outline-none focus:ring-4 focus:ring-[#6b1e32]/70 font-medium transition-all shadow-inner"
-                />
-                <button 
-                    type="submit"
-                    class="w-full sm:w-auto px-6 py-3.5 font-bold tracking-wide text-[#6b1e32] uppercase text-sm transition-all duration-300 bg-[#f5e6d3] hover:bg-white rounded-xl shadow-[0_4px_14px_0_rgba(245,230,211,0.39)] hover:shadow-[0_6px_20px_rgba(245,230,211,0.23)] hover:-translate-y-1"
-                >
-                    Request Invite
-                </button>
-            </form>
-        </div>
+            <div>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="✉️ Email Address *"
+                required
+                class="form-input"
+              />
+            </div>
 
-        <!-- Subtle Location Hint (Inline SVG Map Pin) -->
-        <div class="flex items-center gap-2 mt-24 text-sm font-medium tracking-[0.2em] text-gray-400 uppercase opacity-70 hover:opacity-100 transition-opacity duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-            </svg>
-            <span>Kerala, India</span>
+            <div>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                placeholder="📞 Phone Number *"
+                required
+                class="form-input"
+              />
+            </div>
+
+            <div>
+              <input
+                type="text"
+                id="travelDate"
+                name="travel_date"
+                placeholder="📅 Travel Date"
+                onfocus="this.type = 'date'"
+                onblur="if (!this.value) this.type = 'text';"
+                class="form-input"
+              />
+            </div>
+
+            <div>
+              <textarea
+                id="message"
+                name="message"
+                rows="3"
+                placeholder="💬 Your Message *"
+                required
+                class="form-input resize-y"
+              ></textarea>
+            </div>
+
+            <button
+              type="submit"
+              class="w-full py-3.5 px-4 bg-gradient-to-r from-[#5E1718] to-[#852A28] hover:opacity-95 text-white font-semibold rounded-xl shadow-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              ✈ Send Enquiry
+            </button>
+
+            <div class="divider">
+              <span>OR</span>
+            </div>
+
+            <button
+              type="button"
+              onclick="sendToWhatsApp()"
+              class="w-full py-3.5 px-4 bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold rounded-xl shadow-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              💬 Enquire on WhatsApp
+            </button>
+          </form>
         </div>
+      </div>
     </div>
 
-    <!-- JavaScript to handle form submission -->
     <script>
-        document.getElementById('notify-form').addEventListener('submit', function(e) {
-            e.preventDefault(); 
-            const email = document.getElementById('email-input').value;
-            
-            if(email) {
-                // Fade out the form for a smoother transition
-                const form = document.getElementById('notify-form');
-                form.style.opacity = '0';
-                
-                setTimeout(() => {
-                    form.classList.add('hidden');
-                    // Show the success message
-                    document.getElementById('success-message').classList.remove('hidden');
-                }, 300);
-            }
-        });
+      function sendToWhatsApp() {
+        // Enter your target WhatsApp business number with country code (e.g. 91...)
+        const phoneNumber = "7907963529";
+
+        const name = document.getElementById("name").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const travelDate = document.getElementById("travelDate").value.trim();
+        const message = document.getElementById("message").value.trim();
+
+        if (!name || !message || !phone) {
+          alert(
+            "Please enter at least your Name and Message and phone_Number to continue to WhatsApp.",
+          );
+          return;
+        }
+
+        const formattedText =
+          `*New Enquiry - Friday Retreats*\n\n` +
+          `*Name:* ${name}\n` +
+          `*Email:* ${email || "Not provided"}\n` +
+          `*Phone:* ${phone}\n` +
+          `*Travel Date:* ${travelDate || "Not provided"}\n` +
+          `*Message:* ${message}`;
+
+        const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(formattedText)}`;
+        window.open(whatsappURL, "_blank");
+      }
     </script>
-</body>
+  </body>
 </html>
