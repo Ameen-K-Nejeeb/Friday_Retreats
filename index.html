@@ -46,8 +46,8 @@
         background-color: #faf7f7;
         border: 1px solid #e8dfdf;
         border-radius: 12px;
-        padding: 12px 16px;
-        font-size: 14px;
+        padding: 12px 14px;
+        font-size: 13.5px;
         color: #2d1515;
         outline: none;
         transition: all 0.2s ease-in-out;
@@ -61,6 +61,46 @@
         border-color: var(--accent);
         background-color: #ffffff;
         box-shadow: 0 0 0 3px rgba(133, 42, 40, 0.15);
+      }
+
+      /* Hide browser default dd-mm-yyyy until a value is picked */
+      .custom-date-input {
+        cursor: pointer;
+        color: transparent;
+      }
+
+      /* When date has a value or user inputs it, restore visible text */
+      .custom-date-input.has-value {
+        color: #2d1515;
+      }
+
+      .custom-date-input::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        filter: invert(14%) sepia(50%) saturate(3000%) hue-rotate(330deg) brightness(85%) contrast(100%);
+        opacity: 0.75;
+        transition: opacity 0.2s ease;
+      }
+
+      .custom-date-input::-webkit-calendar-picker-indicator:hover {
+        opacity: 1;
+      }
+
+      /* Placeholder label text */
+      .date-placeholder {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #8c7878;
+        font-size: 13px;
+        pointer-events: none;
+        transition: all 0.2s ease;
+      }
+
+      /* Hide the label once a date is selected */
+      .custom-date-input.has-value + .date-placeholder {
+        opacity: 0;
+        visibility: hidden;
       }
 
       .divider {
@@ -170,21 +210,17 @@
             >
           </h3>
 
-          <!-- Web3Forms Form Tag -->
           <form
             id="enquiryForm"
             action="https://api.web3forms.com/submit"
             method="POST"
             class="space-y-3.5"
           >
-            <!-- Replace YOUR_ACCESS_KEY_HERE with the key Web3Forms sends to your email -->
             <input
               type="hidden"
               name="access_key"
               value="YOUR_ACCESS_KEY_HERE"
             />
-
-            <!-- Optional customizations -->
             <input
               type="hidden"
               name="subject"
@@ -235,16 +271,29 @@
               />
             </div>
 
-            <div>
-              <input
-                type="text"
-                id="travelDate"
-                name="travel_date"
-                placeholder="📅 Travel Date"
-                onfocus="this.type = 'date'"
-                onblur="if (!this.value) this.type = 'text';"
-                class="form-input"
-              />
+            <!-- Start Date & End Date Row -->
+            <div class="grid grid-cols-2 gap-2.5">
+              <div class="relative">
+                <input
+                  type="date"
+                  id="startDate"
+                  name="start_date"
+                  required
+                  class="form-input custom-date-input"
+                />
+                <span class="date-placeholder">📅 Start Date *</span>
+              </div>
+
+              <div class="relative">
+                <input
+                  type="date"
+                  id="endDate"
+                  name="end_date"
+                  required
+                  class="form-input custom-date-input"
+                />
+                <span class="date-placeholder">📅 End Date *</span>
+              </div>
             </div>
 
             <div>
@@ -282,19 +331,48 @@
     </div>
 
     <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const startDateInput = document.getElementById("startDate");
+        const endDateInput = document.getElementById("endDate");
+        const today = new Date().toISOString().split("T")[0];
+
+        // Disable past dates
+        startDateInput.setAttribute("min", today);
+        endDateInput.setAttribute("min", today);
+
+        // Track changes to toggle the placeholder and visible date text
+        [startDateInput, endDateInput].forEach((input) => {
+          input.addEventListener("input", function () {
+            if (this.value) {
+              this.classList.add("has-value");
+            } else {
+              this.classList.remove("has-value");
+            }
+          });
+        });
+
+        // Ensure end date cannot precede start date
+        startDateInput.addEventListener("change", function () {
+          endDateInput.setAttribute("min", this.value);
+          if (endDateInput.value && endDateInput.value < this.value) {
+            endDateInput.value = this.value;
+          }
+        });
+      });
+
       function sendToWhatsApp() {
-        // Enter your target WhatsApp business number with country code (e.g. 91...)
-        const phoneNumber = "7907963529";
+        const phoneNumber = "917907963529";
 
         const name = document.getElementById("name").value.trim();
         const email = document.getElementById("email").value.trim();
         const phone = document.getElementById("phone").value.trim();
-        const travelDate = document.getElementById("travelDate").value.trim();
+        const startDate = document.getElementById("startDate").value.trim();
+        const endDate = document.getElementById("endDate").value.trim();
         const message = document.getElementById("message").value.trim();
 
         if (!name || !message || !phone) {
           alert(
-            "Please enter at least your Name and Message and phone_Number to continue to WhatsApp.",
+            "Please enter at least your 'Name', 'Message', and 'Phone Number' to continue to WhatsApp.",
           );
           return;
         }
@@ -304,7 +382,8 @@
           `*Name:* ${name}\n` +
           `*Email:* ${email || "Not provided"}\n` +
           `*Phone:* ${phone}\n` +
-          `*Travel Date:* ${travelDate || "Not provided"}\n` +
+          `*Check-in Date:* ${startDate || "Not provided"}\n` +
+          `*Check-out Date:* ${endDate || "Not provided"}\n` +
           `*Message:* ${message}`;
 
         const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(formattedText)}`;
