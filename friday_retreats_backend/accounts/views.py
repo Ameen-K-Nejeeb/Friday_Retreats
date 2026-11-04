@@ -8,7 +8,7 @@ from .permissions import IsHotelStaffUser, IsAdminUser
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import (
     CustomTokenObtainPairSerializer,
-    
+    AdminTokenObtainSerializer,
 )
 
 
@@ -33,3 +33,8 @@ class GlobalSettingsView(APIView):
 
     def post(self, request):
         return Response({"message": "Platform settings updated. "})
+
+
+
+class AdminLoginView(TokenObtainPairView):
+    serializer_class = AdminTokenObtainSerializer
