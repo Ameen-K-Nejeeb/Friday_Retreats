@@ -8,6 +8,9 @@ from .views import (
     ResendOTPView,
     ForgotPasswordView,
     ResetPasswordView,
+    AdminDeleteUserView,
+    AdminInviteStaffView,
+    AdminUserDetailView,
 
     GoogleAuthView,
 )
@@ -29,4 +32,8 @@ urlpatterns = [
     path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
 
     path('google-auth/', GoogleAuthView.as_view(), name='google-auth'),
+    path('admin/users/<int:pk>/delete/', AdminDeleteUserView.as_view(), name='admin-delete-user'),
+    path('admin/staff/invite/', AdminInviteStaffView.as_view(), name='admin-invite-staff'),
+
+    path('admin/users/<int:pk>/', AdminUserDetailView.as_view(), name='admin-user-detail'),
 ]

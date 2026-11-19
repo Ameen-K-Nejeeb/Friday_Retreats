@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 import requests
+import secrets
+import string
 
 from .models import CustomUser, OTPRecord
 from .permissions import IsAdminUser, IsHotelStaffUser
@@ -17,6 +19,8 @@ from .serializers import (
     CustomTokenObtainPairSerializer,
     UserSignupSerializer,
 )
+
+from rest_framework.permissions import IsAuthenticated
 
 
 class CustomTokenObtainView(TokenObtainPairView):
@@ -55,6 +59,30 @@ class AdminUserListView(generics.ListAPIView):
     filter_backends = [filters.SearchFilter]
     search_fields = ['email']
 
+class AdminDeleteUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        if request.user.role != 'ADMIN':
+            return Response(
+                {"error": "Admin privileges required."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        user = get_object_or_404(CustomUser, pk=pk)
+
+        # Only prevent the logged-in admin from deleting themselves
+        if user.id == request.user.id:
+            return Response(
+                {"error": "You cannot delete your own admin account."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.delete()
+        return Response(
+            {"message": "User permanently deleted."},
+            status=status.HTTP_200_OK,
+        )
 
 class ToggleUserStatusView(APIView):
     permission_classes = [IsAdminUser]
@@ -334,3 +362,143 @@ class GoogleAuthView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+"""------------------------------------ staff invitations --------------------------------"""
+
+
+class AdminInviteStaffView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != 'ADMIN':
+            return Response(
+                {"error": "Admin privileges required."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        full_name = request.data.get('full_name', '').strip()
+        email = request.data.get('email', '').strip().lower()
+        phone_number = request.data.get('phone_number', '').strip()
+        role = request.data.get('role', 'HOTEL_STAFF').upper()
+
+        if not full_name or not email:
+            return Response(
+                {"error": "Full name and email address are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if role not in ['STAFF', 'HOTEL_STAFF', 'ADMIN']:
+            return Response(
+                {"error": "Invalid staff role."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if CustomUser.objects.filter(email=email).exists():
+            return Response(
+                {"error": "An account with this email already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        name_parts = full_name.split(' ', 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ''
+
+        # Generate a secure temporary password
+        alphabet = string.ascii_letters + string.digits + "!@#$"
+        temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
+
+        user = CustomUser.objects.create_user(
+            email=email,
+            password=temp_password,
+            first_name=first_name,
+            last_name=last_name,
+            phone_number=phone_number,
+            role=role,
+            is_active=True,
+            is_staff=(role == 'ADMIN'),
+        )
+
+        send_mail(
+            subject='Friday Retreats - Staff Portal Invitation',
+            message=(
+                f"Hi {first_name},\n\n"
+                f"You have been invited to join the Friday Retreats Staff Portal as {role.replace('_', ' ')}.\n\n"
+                f"Login Email: {email}\n"
+                f"Temporary Password: {temp_password}\n\n"
+                f"Please sign in and use 'Forgot Password' to set your own password immediately."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+
+        return Response(
+            {
+                "message": "Staff invitation sent successfully.",
+                "id": user.id,
+                "email": user.email,
+                "role": user.role,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AdminUserDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        if request.user.role != 'ADMIN':
+            return Response({"error": "Admin privileges required."}, status=status.HTTP_403_FORBIDDEN)
+
+        user = get_object_or_404(CustomUser, pk=pk)
+        return Response({
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "phone_number": getattr(user, 'phone_number', ''),
+            "role": user.role,
+            "is_active": user.is_active,
+            "fr_coins_balance": getattr(user, 'fr_coins_balance', 0),
+            "date_joined": user.date_joined,
+        }, status=status.HTTP_200_OK)
+
+    def patch(self, request, pk):
+        if request.user.role != 'ADMIN':
+            return Response({"error": "Admin privileges required."}, status=status.HTTP_403_FORBIDDEN)
+
+        user = get_object_or_404(CustomUser, pk=pk)
+        data = request.data
+
+        # Prevent self-deactivation
+        if user.id == request.user.id and data.get('is_active') is False:
+            return Response({"error": "You cannot deactivate your own admin account."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'first_name' in data:
+            user.first_name = data['first_name'].strip()
+        if 'last_name' in data:
+            user.last_name = data['last_name'].strip()
+        if 'phone_number' in data and hasattr(user, 'phone_number'):
+            user.phone_number = data['phone_number'].strip()
+        if 'role' in data and data['role'] in ['USER', 'STAFF', 'HOTEL_STAFF', 'ADMIN']:
+            user.role = data['role']
+            user.is_staff = (data['role'] == 'ADMIN')
+        if 'is_active' in data and user.role != 'ADMIN':
+            user.is_active = bool(data['is_active'])
+        if 'fr_coins_balance' in data and hasattr(user, 'fr_coins_balance'):
+            user.fr_coins_balance = int(data['fr_coins_balance'])
+
+        user.save()
+
+        return Response({
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "phone_number": getattr(user, 'phone_number', ''),
+            "role": user.role,
+            "is_active": user.is_active,
+            "fr_coins_balance": getattr(user, 'fr_coins_balance', 0),
+            "date_joined": user.date_joined,
+        }, status=status.HTTP_200_OK)

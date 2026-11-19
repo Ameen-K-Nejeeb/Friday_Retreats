@@ -12,6 +12,10 @@ import AdminUsersList from './pages/admin/AdminUsersList';
 
 import ForgotPassword from './pages/auth/ForgotPassword';
 
+import AdminUserDetail from './pages/admin/AdminUserDetail';
+import AdminStaffManagement from './pages/admin/AdminStaffManagement';
+import AdminInviteStaff from './pages/admin/AdminInviteStaff';
+
 function App() {
     return (
         <Router>
@@ -34,8 +38,11 @@ function App() {
                 <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                     <Route path="/admin" element={<AdminLayout />}>
                         <Route index element={<Navigate to="dashboard" replace />} />
-                        <Route path="dashboard" element={<div>Admin Dashboard</div>} />
+                        <Route path="dashboard" element={<div className="p-8 text-xl font-bold text-[#5a1c1d]">Admin Dashboard</div>} />
                         <Route path="users" element={<AdminUsersList />} />
+                        <Route path="users/:id" element={<AdminUserDetail />} />
+                        <Route path="staff" element={<AdminStaffManagement />} />
+                        <Route path="staff/invite" element={<AdminInviteStaff />} />
                     </Route>
                 </Route>
 
