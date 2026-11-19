@@ -1,5 +1,6 @@
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
 from .models import CustomUser
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -7,19 +8,30 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
 
-        # Add custom claims
+        # These custom claims allow the React frontend to route the user immediately
         token['role'] = user.role
         token['email'] = user.email
         token['fr_coins_balance'] = user.fr_coins_balance
         return token
 
-class AdminTokenObtainSerializer(CustomTokenObtainPairSerializer):
-    def validate(self, attrs):
-        # This calls the parent validate, which returns the dictionary with access/refresh tokens
-        data = super().validate(attrs)
+class AdminUserListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'email', 'role', 'is_active', 'date_joined']
 
-        # Reject non-admin users
-        if self.user.role != CustomUser.Role.ADMIN:
-            raise AuthenticationFailed('Access Denied: Only administrators can access this portal.')
-        
-        return data
+class UserSignupSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    class Meta:
+        model = CustomUser
+        fields = ['first_name', 'last_name', 'email', 'password']
+
+    def create(self, validated_data):
+        return CustomUser.objects.create_user(
+            email=validated_data['email'],
+            password=validated_data['password'],
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+            role=CustomUser.Role.USER,
+            is_active=False
+        )

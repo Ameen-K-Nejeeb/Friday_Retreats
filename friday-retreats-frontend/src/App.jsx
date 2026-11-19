@@ -1,29 +1,49 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import AdminLogin from './pages/admin/AdminLogin';
+import PublicRoute from './components/PublicRoute';
+import ProtectedRoute from './components/ProtectedRoute';
+
+import LandingPage from './pages/LandingPage';
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import VerifyEmailOtp from './pages/auth/VerifyEmailOtp';
 import AdminLayout from './layouts/AdminLayout';
-import AdminProtectedRoute from './components/admin/AdminProtectedRoute';
 import AdminUsersList from './pages/admin/AdminUsersList';
 
+import ForgotPassword from './pages/auth/ForgotPassword';
+
 function App() {
-  return (
-    <Router>
-      <Routes>
-        {/* Public Admin Route */}
-        <Route path="/admin/login" element={<AdminLogin />} />
+    return (
+        <Router>
+            <Routes>
+                {/* Guest-Only Routes (Blocked when logged in) */}
+                <Route element={<PublicRoute />}>
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/verify-email-otp" element={<VerifyEmailOtp />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                </Route>
 
-        {/* Protected Admin Routes */}
-        <Route element={<AdminProtectedRoute />}>
-          <Route element={<AdminLayout />}>
-            {/* Redirect /admin directly to dashboard */}
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="/admin/dashboard" element={<div className="p-4 text-gray-500">Dashboard Metrics Coming Soon...</div>} />
-            <Route path="/admin/users" element={<AdminUsersList />} />
-          </Route>
-        </Route>
+                {/* User Protected Routes */}
+                <Route element={<ProtectedRoute allowedRoles={['USER']} />}>
+                    <Route path="/home" element={<LandingPage />} />
+                </Route>
 
-      </Routes>
-    </Router>
-  );
+                {/* Admin Protected Routes */}
+                <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+                    <Route path="/admin" element={<AdminLayout />}>
+                        <Route index element={<Navigate to="dashboard" replace />} />
+                        <Route path="dashboard" element={<div>Admin Dashboard</div>} />
+                        <Route path="users" element={<AdminUsersList />} />
+                    </Route>
+                </Route>
+
+                {/* Catch-all */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </Router>
+    );
 }
 
 export default App;

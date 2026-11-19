@@ -1,20 +1,19 @@
 import React from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { adminLogout } from '../features/auth/adminAuthSlice';
+import { logout } from '../features/auth/authSlice'; 
 
 const AdminLayout = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        dispatch(adminLogout());
-        navigate('/admin/login');
-    };
+    dispatch(logout());
+    navigate('/login', { replace: true });
+};
 
     return (
         <div className="flex h-screen bg-gray-100">
-            {/* Sidebar */}
             <aside className="w-64 bg-gray-900 text-white flex flex-col">
                 <div className="p-6">
                     <h2 className="text-2xl font-bold">Friday Retreats</h2>
@@ -30,21 +29,18 @@ const AdminLayout = () => {
                 </nav>
             </aside>
 
-            {/* Main Content Area */}
             <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Top Header */}
                 <header className="bg-white shadow-sm flex items-center justify-between px-6 py-4">
-                    <h1 className="text-xl font-semibold text-gray-800">User Management</h1>
+                    <h1 className="text-xl font-semibold text-gray-800">Admin Portal</h1>
                     <button 
                         onClick={handleLogout}
-                        className="px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700"
+                        className="px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700 transition"
                     >
                         Logout
                     </button>
                 </header>
 
-                {/* Page Content goes here via Outlet */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
                     <Outlet />
                 </main>
             </div>
