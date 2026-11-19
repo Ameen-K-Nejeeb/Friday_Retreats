@@ -36,7 +36,7 @@ class UserSignupSerializer(serializers.ModelSerializer):
             is_active=False
         )
 
-class AdminUserSerializer(serializers.ModelSerializer):
+class AdminUserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = [

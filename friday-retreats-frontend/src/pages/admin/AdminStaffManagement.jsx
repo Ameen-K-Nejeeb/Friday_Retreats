@@ -416,7 +416,12 @@ const AdminStaffManagement = () => {
                                                 : '—'}
                                         </td>
 
-                                        {/* Last Active */}
+                                        {/* Last Active 
+                                        
+                                        <span className="font-semibold text-gray-800">
+                                        {formatLastActive(user.last_login)}
+                                    </span>
+                                        */}
                                         <td className="py-4 px-6 text-[12px] text-gray-500">
                                             {formatLastActive(member.last_login)}
                                         </td>

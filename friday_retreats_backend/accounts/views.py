@@ -598,6 +598,7 @@ class AdminInviteStaffView(APIView):
             phone_number=phone_number,
             role=role,
             is_active=False,
+            is_invite_pending=True,   
             is_staff=(role == 'ADMIN'),
         )
         user.set_unusable_password()
@@ -671,6 +672,7 @@ class SetInvitedPasswordView(APIView):
 
         user.set_password(new_password)
         user.is_active = True
+        user.is_invite_pending = False
         user.save()
 
         return Response(
