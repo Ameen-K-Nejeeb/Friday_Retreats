@@ -8,6 +8,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+import requests
+
 from .models import CustomUser, OTPRecord
 from .permissions import IsAdminUser, IsHotelStaffUser
 from .serializers import (
@@ -264,3 +266,71 @@ class ResetPasswordView(APIView):
         otp_record.delete()
 
         return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+
+
+"""-------------------------------------------------------------google authentication ------------------------------------------------"""
+class GoogleAuthView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        access_token = request.data.get('access_token')
+        if not access_token:
+            return Response(
+                {"error": "Google access token is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Verify token and fetch user info from Google
+        google_response = requests.get(
+            'https://www.googleapis.com/oauth2/v3/userinfo',
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10,
+        )
+
+        if google_response.status_code != 200:
+            return Response(
+                {"error": "Invalid or expired Google token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user_data = google_response.json()
+        email = user_data.get('email', '').lower()
+        first_name = user_data.get('given_name', '')
+        last_name = user_data.get('family_name', '')
+
+        if not email:
+            return Response(
+                {"error": "Google account does not have an email address."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Get existing user or create a new active USER
+        user, created = CustomUser.objects.get_or_create(
+            email=email,
+            defaults={
+                'first_name': first_name,
+                'last_name': last_name,
+                'role': CustomUser.Role.USER,
+                'is_active': True,
+            },
+        )
+
+        if created:
+            user.set_unusable_password()
+            user.save()
+        elif not user.is_active:
+            return Response(
+                {"error": "This account has been blocked or deactivated."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Generate SimpleJWT tokens with your custom claims (role, email, fr_coins_balance)
+        refresh = CustomTokenObtainPairSerializer.get_token(user)
+
+        return Response(
+            {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            },
+            status=status.HTTP_200_OK,
+        )
