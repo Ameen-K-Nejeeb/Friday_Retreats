@@ -242,6 +242,7 @@ const VerifyEmailOtp = () => {
             </div>
 
             {/* Right Image Pane */}
+            
             <div
                 className="hidden lg:flex lg:w-1/2 relative bg-cover bg-center flex-col justify-end p-14"
                 style={{ backgroundImage: `url(${villaBg})` }}
