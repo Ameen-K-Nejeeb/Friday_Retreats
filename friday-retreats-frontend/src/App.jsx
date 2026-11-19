@@ -16,6 +16,8 @@ import AdminUserDetail from './pages/admin/AdminUserDetail';
 import AdminStaffManagement from './pages/admin/AdminStaffManagement';
 import AdminInviteStaff from './pages/admin/AdminInviteStaff';
 
+import SetPassword from './pages/auth/SetPassword';
+
 function App() {
     return (
         <Router>
@@ -27,6 +29,7 @@ function App() {
                     <Route path="/register" element={<Register />} />
                     <Route path="/verify-email-otp" element={<VerifyEmailOtp />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/set-password/:uid/:token" element={<SetPassword />} />
                 </Route>
 
                 {/* User Protected Routes */}
@@ -44,6 +47,22 @@ function App() {
                         <Route path="staff" element={<AdminStaffManagement />} />
                         <Route path="staff/invite" element={<AdminInviteStaff />} />
                     </Route>
+                </Route>
+
+                {/* Staff Protected Routes */}
+                <Route element={<ProtectedRoute allowedRoles={['STAFF']} />}>
+                    <Route
+                        path="/staff/dashboard"
+                        element={<div className="p-8 text-xl font-bold text-[#5a1c1d]">Staff Dashboard</div>}
+                    />
+                </Route>
+
+                {/* Hotel Staff Protected Routes */}
+                <Route element={<ProtectedRoute allowedRoles={['HOTEL_STAFF']} />}>
+                    <Route
+                        path="/hotel/dashboard"
+                        element={<div className="p-8 text-xl font-bold text-[#5a1c1d]">Hotel Staff Dashboard</div>}
+                    />
                 </Route>
 
                 {/* Catch-all */}

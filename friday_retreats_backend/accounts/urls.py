@@ -11,6 +11,8 @@ from .views import (
     AdminDeleteUserView,
     AdminInviteStaffView,
     AdminUserDetailView,
+    SetInvitedPasswordView,
+    AdminResendInviteView,
 
     GoogleAuthView,
 )
@@ -36,4 +38,7 @@ urlpatterns = [
     path('admin/staff/invite/', AdminInviteStaffView.as_view(), name='admin-invite-staff'),
 
     path('admin/users/<int:pk>/', AdminUserDetailView.as_view(), name='admin-user-detail'),
+
+    path('set-password/', SetInvitedPasswordView.as_view(), name='set-invited-password'),
+    path('admin/staff/<int:pk>/resend-invite/', AdminResendInviteView.as_view(), name='admin-resend-invite'),
 ]

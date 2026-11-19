@@ -11,6 +11,11 @@ const AdminUserDetail = () => {
 
     const [user, setUser] = useState(location.state?.user || null);
     const [loading, setLoading] = useState(!location.state?.user);
+    const [togglingStatus, setTogglingStatus] = useState(false);
+
+    // Role-specific activity tab state
+    const [staffActivityTab, setStaffActivityTab] = useState('PACKAGES_BOOKINGS');
+    const [hotelActivityTab, setHotelActivityTab] = useState('INVENTORY');
 
     // Edit Modal State
     const [isEditing, setIsEditing] = useState(false);
@@ -41,6 +46,23 @@ const AdminUserDetail = () => {
         };
         fetchUser();
     }, [id, token]);
+
+    const formatLastActive = (dateStr) => {
+        if (!dateStr) return 'Never';
+        const diffMs = Date.now() - new Date(dateStr).getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins} min ago`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours} hr${diffHours > 1 ? 's' : ''} ago`;
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays < 30) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+        return new Date(dateStr).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
+    };
 
     const openEditModal = () => {
         if (!user) return;
@@ -81,6 +103,29 @@ const AdminUserDetail = () => {
         }
     };
 
+    const handleToggleStatus = async () => {
+        if (!user || user.role === 'ADMIN' || user.is_superuser || user.email === currentAdminEmail) {
+            return;
+        }
+
+        setTogglingStatus(true);
+        try {
+            const res = await axios.patch(
+                `http://127.0.0.1:8000/api/accounts/admin/users/${user.id}/toggle-status/`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setUser((prev) => ({
+                ...prev,
+                is_active: res.data?.is_active ?? !prev.is_active,
+            }));
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to update account status.');
+        } finally {
+            setTogglingStatus(false);
+        }
+    };
+
     const handleDelete = async () => {
         if (!user || user.email === currentAdminEmail) return;
 
@@ -109,9 +154,51 @@ const AdminUserDetail = () => {
     }
 
     const isSelf = user.email === currentAdminEmail;
+    const isProtectedAdmin = user.role === 'ADMIN' || user.is_superuser || isSelf;
+    const isStaff = user.role === 'STAFF';
+    const isHotelStaff = user.role === 'HOTEL_STAFF';
+    const isAdmin = user.role === 'ADMIN';
+    const isCustomer = user.role === 'USER';
+    const isAnyStaff = isStaff || isHotelStaff;
+
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
     const initials = ((user.first_name?.[0] || user.email[0]) + (user.last_name?.[0] || '')).toUpperCase();
     const roleLabel = (user.role || 'USER').replace('_', ' ');
+    const department = isHotelStaff
+        ? 'Hospitality & Property'
+        : isStaff
+        ? 'Operations & Support'
+        : 'System Administration';
+
+    const staffResponsibilities = [
+        'Create & manage retreat packages',
+        'Invite & manage Hotel Staff accounts',
+        'View hotel rooms & live inventory status',
+        'Update booking statuses (Pending, Confirmed, Cancelled)',
+        'View customer profiles (Read-only)',
+        'Handle refunds, transactions, support & reports',
+    ];
+
+    const hotelStaffResponsibilities = [
+        'Manage own hotel details & photo gallery',
+        'Create & edit room types (Deluxe, Premium, etc.)',
+        'Manage room inventory & weekly/monthly availability',
+        'Block / unblock rooms for maintenance & track adjustments',
+        'Log Walk-in, Phone & other property bookings',
+        'Monitor today’s check-ins, check-outs & active stays',
+    ];
+
+    const adminResponsibilities = [
+        'Full platform administration & role management',
+        'Manage all customers, staff, hotel staff & admins',
+        'System-wide oversight of bookings, hotels & finance',
+    ];
+
+    const activeResponsibilities = isHotelStaff
+        ? hotelStaffResponsibilities
+        : isStaff
+        ? staffResponsibilities
+        : adminResponsibilities;
 
     return (
         <div className="flex-1 flex flex-col">
@@ -124,15 +211,9 @@ const AdminUserDetail = () => {
             <main className="p-8 max-w-6xl w-full mx-auto">
                 {/* Breadcrumb */}
                 <div className="text-[12px] text-gray-400 mb-3 flex items-center gap-2">
-                    <Link to="/admin/users" className="hover:text-[#5a1c1d]">People</Link>
-                    <span>&rsaquo;</span>
-                    <button
-                        type="button"
-                        onClick={() => navigate(-1)}
-                        className="hover:text-[#5a1c1d] cursor-pointer"
-                    >
-                        {['STAFF', 'HOTEL_STAFF'].includes(user.role) ? 'Staff' : 'Customers'}
-                    </button>
+                    <Link to={isAnyStaff ? '/admin/staff' : '/admin/users'} className="hover:text-[#5a1c1d]">
+                        {isAnyStaff ? 'Staff Management' : 'People'}
+                    </Link>
                     <span>&rsaquo;</span>
                     <span className="text-gray-800 font-medium">{fullName}</span>
                 </div>
@@ -142,21 +223,50 @@ const AdminUserDetail = () => {
                     <div className="flex flex-wrap items-center gap-3">
                         <h1 className="text-2xl font-bold text-gray-900">{fullName}</h1>
                         <span className="text-[12px] text-gray-400">
-                            (ID: FR-{String(user.id).padStart(5, '0')})
+                            (ID:{' '}
+                            {isAnyStaff
+                                ? `STF${String(user.id).padStart(3, '0')}`
+                                : `FR-${String(user.id).padStart(5, '0')}`}
+                            )
                         </span>
-                        <span
-                            className={`px-2.5 py-0.5 text-[11px] font-semibold rounded-full ${
-                                user.is_active
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-gray-200 text-gray-600'
-                            }`}
-                        >
-                            {user.is_active ? 'Active' : 'Inactive'}
-                        </span>
+                        {user.is_invite_pending ? (
+                            <span className="px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-amber-100 text-amber-700">
+                                Pending Invite
+                            </span>
+                        ) : (
+                            <span
+                                className={`px-2.5 py-0.5 text-[11px] font-semibold rounded-full ${
+                                    user.is_active
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-gray-200 text-gray-600'
+                                }`}
+                            >
+                                {user.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        )}
                     </div>
 
-                    {/* Delete (Left) + Edit (Right) */}
+                    {/* Block/Unblock + Delete + Edit */}
                     <div className="flex items-center gap-3">
+                        {!isProtectedAdmin && (
+                            <button
+                                type="button"
+                                disabled={togglingStatus}
+                                onClick={handleToggleStatus}
+                                className={`inline-flex items-center gap-1.5 px-4 py-2 text-[12px] font-medium rounded-lg border transition cursor-pointer disabled:opacity-60 ${
+                                    user.is_active
+                                        ? 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100'
+                                        : 'border-green-300 text-green-800 bg-green-50 hover:bg-green-100'
+                                }`}
+                            >
+                                {togglingStatus
+                                    ? 'Updating...'
+                                    : user.is_active
+                                    ? 'Block Account'
+                                    : 'Unblock Account'}
+                            </button>
+                        )}
+
                         {!isSelf && (
                             <button
                                 type="button"
@@ -195,7 +305,12 @@ const AdminUserDetail = () => {
                                 <div>
                                     <h3 className="text-base font-bold text-gray-900">{fullName}</h3>
                                     <span className="inline-block mt-1 px-2.5 py-0.5 text-[10px] font-semibold bg-[#f4e6e6] text-[#5a1c1d] rounded-full">
-                                        {roleLabel} &bull; {user.is_active ? 'Active' : 'Inactive'}
+                                        {roleLabel} &bull;{' '}
+                                        {user.is_invite_pending
+                                            ? 'Pending'
+                                            : user.is_active
+                                            ? 'Active'
+                                            : 'Inactive'}
                                     </span>
                                 </div>
                             </div>
@@ -212,78 +327,329 @@ const AdminUserDetail = () => {
                                           })
                                         : 'Recently'}
                                 </p>
+                                <p className="text-gray-500">
+                                    Last Active:{' '}
+                                    <span className="font-semibold text-gray-800">
+                                        {formatLastActive(user.last_login)}
+                                    </span>
+                                </p>
                             </div>
 
                             <div className="pt-5">
                                 <p className="text-[10px] font-bold tracking-wider uppercase text-gray-400 mb-2">
-                                    Account Reference
+                                    {isCustomer ? 'Account Reference' : 'Department & Assignment'}
                                 </p>
                                 <div className="p-3.5 rounded-xl bg-[#f9f6f5] border border-gray-200/70">
-                                    <p className="text-[12px] font-semibold text-gray-800">{roleLabel}</p>
+                                    <p className="text-[12px] font-semibold text-gray-800">
+                                        {isCustomer ? 'FR Club Member' : department}
+                                    </p>
                                     <p className="text-[11px] text-gray-400">
-                                        FR-MEM-{String(user.id).padStart(5, '0')}
+                                        {isCustomer
+                                            ? `FR-MEM-${String(user.id).padStart(5, '0')}`
+                                            : `${isAnyStaff ? `STF${String(user.id).padStart(3, '0')}` : `ADM${String(user.id).padStart(3, '0')}`} • ${
+                                                  user.is_invite_pending ? 'Invite Pending' : 'Onboarding Complete'
+                                              }`}
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-xs">
-                            <h4 className="text-sm font-bold text-gray-900 mb-4 pb-3 border-b border-gray-100">
-                                Personal Information
-                            </h4>
-                            <div className="grid grid-cols-2 gap-4 text-[12px]">
-                                <div>
-                                    <p className="text-[10px] font-semibold uppercase text-gray-400">Role</p>
-                                    <p className="font-medium text-gray-800 mt-0.5">{roleLabel}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-semibold uppercase text-gray-400">Language</p>
-                                    <p className="font-medium text-gray-800 mt-0.5">English</p>
+                        {/* Responsibilities Card (Staff / Hotel Staff / Admin) vs Personal Info (Customer) */}
+                        {!isCustomer ? (
+                            <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-xs">
+                                <h4 className="text-sm font-bold text-gray-900 mb-4 pb-3 border-b border-gray-100">
+                                    Access Scope &amp; Responsibilities
+                                </h4>
+                                <ul className="space-y-2.5 text-[12px] text-gray-600">
+                                    {activeResponsibilities.map((item, idx) => (
+                                        <li key={idx} className="flex items-start gap-2.5">
+                                            <span className="w-4 h-4 mt-0.5 rounded-full bg-[#f4e6e6] text-[#5a1c1d] flex items-center justify-center shrink-0 text-[10px] font-bold">
+                                                ✓
+                                            </span>
+                                            <span>{item}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ) : (
+                            <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-xs">
+                                <h4 className="text-sm font-bold text-gray-900 mb-4 pb-3 border-b border-gray-100">
+                                    Personal Information
+                                </h4>
+                                <div className="grid grid-cols-2 gap-4 text-[12px]">
+                                    <div>
+                                        <p className="text-[10px] font-semibold uppercase text-gray-400">Role</p>
+                                        <p className="font-medium text-gray-800 mt-0.5">Customer</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-semibold uppercase text-gray-400">Language</p>
+                                        <p className="font-medium text-gray-800 mt-0.5">English</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
-                    {/* Right Column */}
+                    {/* Right Column — Role-Specific View */}
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
-                                <p className="text-[11px] text-gray-500 mb-1">Total Bookings</p>
-                                <p className="text-2xl font-bold text-gray-900">0</p>
-                            </div>
-                            <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
-                                <p className="text-[11px] text-gray-500 mb-1">Completed</p>
-                                <p className="text-2xl font-bold text-gray-900">0</p>
-                            </div>
-                            <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
-                                <p className="text-[11px] text-gray-500 mb-1">Confirmed</p>
-                                <p className="text-2xl font-bold text-gray-900">0</p>
-                            </div>
-                            <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
-                                <p className="text-[11px] text-gray-500 mb-1">Cancelled</p>
-                                <p className="text-2xl font-bold text-gray-900">0</p>
-                            </div>
-                            <div className="rounded-2xl border border-[#f2d0cd] p-5 shadow-xs bg-gradient-to-br from-[#fdeae8] to-[#f8d7d4]">
-                                <p className="text-[11px] font-medium text-[#7a2e2e] mb-1">FR Coins</p>
-                                <p className="text-2xl font-bold text-[#9e2a2b]">
-                                    {(user.fr_coins_balance ?? 0).toLocaleString()}
-                                </p>
-                            </div>
-                            <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
-                                <p className="text-[11px] text-gray-500 mb-1">Total Spent</p>
-                                <p className="text-2xl font-bold text-gray-900">₹0</p>
-                            </div>
-                        </div>
+                        {/* 1. STAFF VIEW */}
+                        {isStaff && (
+                            <>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Packages Created</p>
+                                        <p className="text-2xl font-bold text-gray-900">0</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Hotel Staff Invited</p>
+                                        <p className="text-2xl font-bold text-gray-900">0</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Bookings Managed</p>
+                                        <p className="text-2xl font-bold text-gray-900">0</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Refunds Processed</p>
+                                        <p className="text-2xl font-bold text-gray-900">0</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-[#f2d0cd] p-5 shadow-xs bg-gradient-to-br from-[#fdeae8] to-[#f8d7d4]">
+                                        <p className="text-[11px] font-medium text-[#7a2e2e] mb-1">Transactions Reviewed</p>
+                                        <p className="text-2xl font-bold text-[#9e2a2b]">0</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Last Active</p>
+                                        <p className="text-lg font-bold text-gray-900 mt-1">
+                                            {formatLastActive(user.last_login)}
+                                        </p>
+                                    </div>
+                                </div>
 
-                        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
-                            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                                <h4 className="text-sm font-bold text-gray-900">Package History</h4>
-                                <span className="text-[11px] font-semibold text-[#5a1c1d]">View All &rarr;</span>
-                            </div>
-                            <div className="p-8 text-center text-[13px] text-gray-400">
-                                No bookings yet. Once the Bookings module is connected, retreat history will appear here.
-                            </div>
-                        </div>
+                                <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                                        <h4 className="text-sm font-bold text-gray-900">
+                                            Staff Operational Activity
+                                        </h4>
+                                        <div className="inline-flex flex-wrap items-center gap-1 p-1 bg-[#f5f2f0] rounded-lg">
+                                            <button
+                                                type="button"
+                                                onClick={() => setStaffActivityTab('PACKAGES_BOOKINGS')}
+                                                className={`px-3 py-1 text-[11px] font-semibold rounded-md transition cursor-pointer ${
+                                                    staffActivityTab === 'PACKAGES_BOOKINGS'
+                                                        ? 'bg-[#5a1c1d] text-white'
+                                                        : 'text-gray-600 hover:text-gray-900'
+                                                }`}
+                                            >
+                                                Packages &amp; Bookings
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setStaffActivityTab('HOTEL_STAFF')}
+                                                className={`px-3 py-1 text-[11px] font-semibold rounded-md transition cursor-pointer ${
+                                                    staffActivityTab === 'HOTEL_STAFF'
+                                                        ? 'bg-[#5a1c1d] text-white'
+                                                        : 'text-gray-600 hover:text-gray-900'
+                                                }`}
+                                            >
+                                                Hotel Staff Invited
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setStaffActivityTab('FINANCE')}
+                                                className={`px-3 py-1 text-[11px] font-semibold rounded-md transition cursor-pointer ${
+                                                    staffActivityTab === 'FINANCE'
+                                                        ? 'bg-[#5a1c1d] text-white'
+                                                        : 'text-gray-600 hover:text-gray-900'
+                                                }`}
+                                            >
+                                                Refunds &amp; Finance
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="p-8 text-center text-[13px] text-gray-400">
+                                        {staffActivityTab === 'PACKAGES_BOOKINGS' &&
+                                            'No package creations or booking status updates logged yet.'}
+                                        {staffActivityTab === 'HOTEL_STAFF' &&
+                                            'No hotel staff invitations sent by this staff member yet.'}
+                                        {staffActivityTab === 'FINANCE' &&
+                                            'No refund actions or finance verifications recorded yet.'}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* 2. HOTEL STAFF VIEW */}
+                        {isHotelStaff && (
+                            <>
+                                {/* Assigned Property Banner */}
+                                <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-11 h-11 rounded-xl bg-[#f4e6e6] text-[#5a1c1d] flex items-center justify-center shrink-0">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold tracking-wider uppercase text-gray-400">
+                                                Managed Property
+                                            </p>
+                                            <h3 className="text-base font-bold text-gray-900">
+                                                {user.hotel_name || 'No Hotel Linked Yet'}
+                                            </h3>
+                                            <p className="text-[12px] text-gray-500">
+                                                {user.hotel_location || 'Property details & photos will appear once the Hotels module is connected.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="px-3 py-1 text-[11px] font-semibold rounded-full bg-[#f9f6f5] border border-gray-200 text-gray-600">
+                                        {user.hotel_name ? 'Property Active' : 'Unassigned'}
+                                    </span>
+                                </div>
+
+                                {/* Hotel Staff KPI Grid */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Total Physical Rooms</p>
+                                        <p className="text-2xl font-bold text-gray-900">0</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-[#f2d0cd] p-5 shadow-xs bg-gradient-to-br from-[#fdeae8] to-[#f8d7d4]">
+                                        <p className="text-[11px] font-medium text-[#7a2e2e] mb-1">Available Today</p>
+                                        <p className="text-2xl font-bold text-[#9e2a2b]">0</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Booked Today</p>
+                                        <p className="text-2xl font-bold text-gray-900">0</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Blocked / Maintenance</p>
+                                        <p className="text-2xl font-bold text-amber-600">0</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Today&apos;s Check-ins / Outs</p>
+                                        <p className="text-2xl font-bold text-gray-900">0 / 0</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Active Bookings</p>
+                                        <p className="text-2xl font-bold text-gray-900">0</p>
+                                    </div>
+                                </div>
+
+                                {/* Hotel Staff Activity Tabs */}
+                                <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                                        <h4 className="text-sm font-bold text-gray-900">
+                                            Property Operations &amp; Logs
+                                        </h4>
+                                        <div className="inline-flex items-center gap-1 p-1 bg-[#f5f2f0] rounded-lg">
+                                            <button
+                                                type="button"
+                                                onClick={() => setHotelActivityTab('INVENTORY')}
+                                                className={`px-3 py-1 text-[11px] font-semibold rounded-md transition cursor-pointer ${
+                                                    hotelActivityTab === 'INVENTORY'
+                                                        ? 'bg-[#5a1c1d] text-white'
+                                                        : 'text-gray-600 hover:text-gray-900'
+                                                }`}
+                                            >
+                                                Inventory Adjustments
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setHotelActivityTab('BOOKINGS')}
+                                                className={`px-3 py-1 text-[11px] font-semibold rounded-md transition cursor-pointer ${
+                                                    hotelActivityTab === 'BOOKINGS'
+                                                        ? 'bg-[#5a1c1d] text-white'
+                                                        : 'text-gray-600 hover:text-gray-900'
+                                                }`}
+                                            >
+                                                Walk-in &amp; Phone Bookings
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="p-8 text-center text-[13px] text-gray-400">
+                                        {hotelActivityTab === 'INVENTORY'
+                                            ? 'No room availability or maintenance block adjustments logged yet.'
+                                            : 'No Walk-in, Phone, or direct property bookings recorded yet.'}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* 3. CUSTOMER (USER) VIEW */}
+                        {isCustomer && (
+                            <>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Total Bookings</p>
+                                        <p className="text-2xl font-bold text-gray-900">0</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Completed</p>
+                                        <p className="text-2xl font-bold text-gray-900">0</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Confirmed</p>
+                                        <p className="text-2xl font-bold text-gray-900">0</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Cancelled</p>
+                                        <p className="text-2xl font-bold text-gray-900">0</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-[#f2d0cd] p-5 shadow-xs bg-gradient-to-br from-[#fdeae8] to-[#f8d7d4]">
+                                        <p className="text-[11px] font-medium text-[#7a2e2e] mb-1">FR Coins</p>
+                                        <p className="text-2xl font-bold text-[#9e2a2b]">
+                                            {(user.fr_coins_balance ?? 0).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Total Spent</p>
+                                        <p className="text-2xl font-bold text-gray-900">₹0</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                                        <h4 className="text-sm font-bold text-gray-900">Package History</h4>
+                                        <span className="text-[11px] font-semibold text-[#5a1c1d]">View All &rarr;</span>
+                                    </div>
+                                    <div className="p-8 text-center text-[13px] text-gray-400">
+                                        No bookings yet. Once the Bookings module is connected, retreat history will appear here.
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* 4. ADMIN VIEW */}
+                        {isAdmin && (
+                            <>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Privilege Level</p>
+                                        <p className="text-xl font-bold text-[#5a1c1d] mt-1">Super Admin</p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Account Status</p>
+                                        <p className="text-xl font-bold text-green-700 mt-1">
+                                            {user.is_active ? 'Active' : 'Inactive'}
+                                        </p>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                                        <p className="text-[11px] text-gray-500 mb-1">Last Active</p>
+                                        <p className="text-lg font-bold text-gray-900 mt-1">
+                                            {formatLastActive(user.last_login)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                                        <h4 className="text-sm font-bold text-gray-900">Administrator Audit Log</h4>
+                                        <span className="text-[11px] font-semibold text-[#5a1c1d]">System</span>
+                                    </div>
+                                    <div className="p-8 text-center text-[13px] text-gray-400">
+                                        Administrative actions (invitations, role updates, and system changes) will be logged here.
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </main>

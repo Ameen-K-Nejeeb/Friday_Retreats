@@ -35,3 +35,12 @@ class UserSignupSerializer(serializers.ModelSerializer):
             role=CustomUser.Role.USER,
             is_active=False
         )
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = [
+            'id', 'first_name', 'last_name', 'email', 'phone_number',
+            'role', 'is_active', 'is_invite_pending', 'fr_coins_balance',
+            'date_joined', 'last_login',
+        ]

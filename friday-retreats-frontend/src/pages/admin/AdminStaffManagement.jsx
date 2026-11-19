@@ -48,6 +48,22 @@ const AdminStaffManagement = () => {
 
     const hotelStaffCount = staffList.filter((u) => u.role === 'HOTEL_STAFF').length;
 
+
+    const handleResendInvite = async (e, member) => {
+        e.stopPropagation();
+        try {
+            await axios.post(
+                `http://127.0.0.1:8000/api/accounts/admin/staff/${member.id}/resend-invite/`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            alert(`Fresh invitation link sent to ${member.email}`);
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to resend invitation.');
+        }
+    };
+
+
     const getDepartment = (role) => {
         if (role === 'ADMIN') return 'Operations';
         if (role === 'HOTEL_STAFF') return 'Hospitality';
@@ -74,7 +90,7 @@ const AdminStaffManagement = () => {
     // KPI Counts
     const totalStaff = staffList.length;
     const activeStaff = staffList.filter((u) => u.is_active).length;
-    const inactiveStaff = staffList.filter((u) => !u.is_active).length;
+    const inactiveStaff = staffList.filter((u) => !u.is_active && !u.is_invite_pending).length;
     const suspendedStaff = 0;
     const adminCount = staffList.filter((u) => u.role === 'ADMIN').length;
 
@@ -87,7 +103,8 @@ const AdminStaffManagement = () => {
         const matchesStatus =
             statusTab === 'All' ||
             (statusTab === 'Active' && u.is_active) ||
-            (statusTab === 'Inactive' && !u.is_active);
+            (statusTab === 'Pending' && u.is_invite_pending) ||
+            (statusTab === 'Inactive' && !u.is_active && !u.is_invite_pending);
 
         const matchesDept =
             departmentFilter === 'ALL' || getDepartment(u.role) === departmentFilter;
@@ -102,14 +119,15 @@ const AdminStaffManagement = () => {
     );
 
     const handleExportCSV = () => {
-        const headers = ['Staff ID', 'Name', 'Email', 'Department', 'Role', 'Status'];
+        const headers = ['Staff ID', 'Name', 'Email', 'Department', 'Role', 'Status', 'Last Active'];
         const rows = filteredStaff.map((u) => [
             `STF${String(u.id).padStart(3, '0')}`,
             getFullName(u),
             u.email,
             getDepartment(u.role),
             getRoleLabel(u.role),
-            u.is_active ? 'Active' : 'Inactive',
+            u.is_invite_pending ? 'Pending' : u.is_active ? 'Active' : 'Inactive',
+            formatLastActive(u.last_login),
         ]);
         const csvContent =
             'data:text/csv;charset=utf-8,' +
@@ -120,6 +138,28 @@ const AdminStaffManagement = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+
+    const formatLastActive = (dateStr) => {
+        if (!dateStr) return 'Never';
+        const diffMs = Date.now() - new Date(dateStr).getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins} min ago`;
+
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays < 30) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+
+        return new Date(dateStr).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
     };
 
     return (
@@ -281,6 +321,7 @@ const AdminStaffManagement = () => {
                                     <th className="py-3.5 px-6">Role</th>
                                     <th className="py-3.5 px-6">Status</th>
                                     <th className="py-3.5 px-6">Joined</th>
+                                    <th className="py-3.5 px-6">Last Active</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 text-[13px]">
@@ -298,59 +339,89 @@ const AdminStaffManagement = () => {
                                     </tr>
                                 ) : (
                                     paginatedStaff.map((member) => (
-                                        <tr
-                                            key={member.id}
-                                            onClick={() => navigate(`/admin/users/${member.id}`, { state: { user: member } })}
-                                            className="hover:bg-[#fcf9f8] transition cursor-pointer"
-                                        >
-                                            <td className="py-4 px-6">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-full bg-[#f4d8d6] text-[#5a1c1d] font-bold text-[12px] flex items-center justify-center shrink-0">
-                                                        {getInitials(member)}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-semibold text-gray-900 leading-tight">
-                                                            {getFullName(member)}
-                                                        </p>
-                                                        <p className="text-[11px] text-gray-400 mt-0.5">
-                                                            {member.email}
-                                                        </p>
-                                                    </div>
+                                    <tr
+                                        key={member.id}
+                                        onClick={() => navigate(`/admin/users/${member.id}`, { state: { user: member } })}
+                                        className="hover:bg-[#fcf9f8] transition cursor-pointer"
+                                    >
+                                        {/* Staff */}
+                                        <td className="py-4 px-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-full bg-[#f4d8d6] text-[#5a1c1d] font-bold text-[12px] flex items-center justify-center shrink-0">
+                                                    {getInitials(member)}
                                                 </div>
-                                            </td>
-                                            <td className="py-4 px-6 text-[12px] font-medium text-gray-600">
-                                                STF{String(member.id).padStart(3, '0')}
-                                            </td>
-                                            <td className="py-4 px-6 text-[12px] text-gray-700">
-                                                {getDepartment(member.role)}
-                                            </td>
-                                            <td className="py-4 px-6 text-[12px] text-gray-700">
-                                                {getRoleLabel(member.role)}
-                                            </td>
-                                            <td className="py-4 px-6">
-                                                {member.is_active ? (
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#fdf2f2] text-[#9e2a2b]">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#9e2a2b]" />
-                                                        Active
+                                                <div>
+                                                    <p className="font-semibold text-gray-900 leading-tight">
+                                                        {getFullName(member)}
+                                                    </p>
+                                                    <p className="text-[11px] text-gray-400 mt-0.5">
+                                                        {member.email}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        {/* Staff ID */}
+                                        <td className="py-4 px-6 text-[12px] font-medium text-gray-600">
+                                            STF{String(member.id).padStart(3, '0')}
+                                        </td>
+
+                                        {/* Department */}
+                                        <td className="py-4 px-6 text-[12px] text-gray-700">
+                                            {getDepartment(member.role)}
+                                        </td>
+
+                                        {/* Role */}
+                                        <td className="py-4 px-6 text-[12px] text-gray-700">
+                                            {getRoleLabel(member.role)}
+                                        </td>
+
+                                        {/* Status */}
+                                        <td className="py-4 px-6">
+                                            {member.is_invite_pending ? (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                                        Pending
                                                     </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                                                        Inactive
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="py-4 px-6 text-[12px] text-gray-500">
-                                                {member.date_joined
-                                                    ? new Date(member.date_joined).toLocaleDateString('en-US', {
-                                                          month: 'short',
-                                                          day: 'numeric',
-                                                          year: 'numeric',
-                                                      })
-                                                    : '—'}
-                                            </td>
-                                        </tr>
-                                    ))
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => handleResendInvite(e, member)}
+                                                        className="text-[11px] font-semibold text-[#5a1c1d] hover:underline cursor-pointer"
+                                                    >
+                                                        Resend
+                                                    </button>
+                                                </div>
+                                            ) : member.is_active ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#fdf2f2] text-[#9e2a2b]">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-[#9e2a2b]" />
+                                                    Active
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                                                    Inactive
+                                                </span>
+                                            )}
+                                        </td>
+
+                                        {/* Joined */}
+                                        <td className="py-4 px-6 text-[12px] text-gray-500">
+                                            {member.date_joined
+                                                ? new Date(member.date_joined).toLocaleDateString('en-US', {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    year: 'numeric',
+                                                })
+                                                : '—'}
+                                        </td>
+
+                                        {/* Last Active */}
+                                        <td className="py-4 px-6 text-[12px] text-gray-500">
+                                            {formatLastActive(member.last_login)}
+                                        </td>
+                                    </tr>
+                                ))
                                 )}
                             </tbody>
                         </table>

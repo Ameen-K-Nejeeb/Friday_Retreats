@@ -40,6 +40,7 @@ class CustomUser(AbstractUser):
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.USER)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     fr_coins_balance = models.IntegerField(default=0)
+    is_invite_pending = models.BooleanField(default=False)
 
     # Tell Django to use our custom manager
     objects = CustomUserManager()

@@ -21,7 +21,9 @@ from .serializers import (
 )
 
 from rest_framework.permissions import IsAuthenticated
-
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes, force_str
 
 class CustomTokenObtainView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -416,6 +418,7 @@ class AdminInviteStaffView(APIView):
             phone_number=phone_number,
             role=role,
             is_active=True,
+            is_invite_pending=True,
             is_staff=(role == 'ADMIN'),
         )
 
@@ -443,6 +446,46 @@ class AdminInviteStaffView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+class AdminResendInviteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if request.user.role != 'ADMIN':
+            return Response(
+                {"error": "Admin privileges required."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        user = get_object_or_404(CustomUser, pk=pk)
+
+        if not user.is_invite_pending:
+            return Response(
+                {"error": "This account has already been activated."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+        invite_link = f"{frontend_url}/set-password/{uid}/{token}"
+
+        send_mail(
+            subject='Friday Retreats - Reminder: Activate Your Staff Account',
+            message=(
+                f"Hi {user.first_name or 'there'},\n\n"
+                f"Here is your fresh activation link for the Friday Retreats Portal:\n"
+                f"{invite_link}\n\n"
+                f"This link is valid for 24 hours and can only be used once."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
+        return Response(
+            {"message": f"Invitation resent to {user.email}."},
+            status=status.HTTP_200_OK,
+        )
 
 class AdminUserDetailView(APIView):
     permission_classes = [IsAuthenticated]
@@ -460,8 +503,10 @@ class AdminUserDetailView(APIView):
             "phone_number": getattr(user, 'phone_number', ''),
             "role": user.role,
             "is_active": user.is_active,
+            "is_invite_pending": getattr(user, 'is_invite_pending', False),
             "fr_coins_balance": getattr(user, 'fr_coins_balance', 0),
             "date_joined": user.date_joined,
+            "last_login": user.last_login,
         }, status=status.HTTP_200_OK)
 
     def patch(self, request, pk):
@@ -502,3 +547,133 @@ class AdminUserDetailView(APIView):
             "fr_coins_balance": getattr(user, 'fr_coins_balance', 0),
             "date_joined": user.date_joined,
         }, status=status.HTTP_200_OK)
+
+
+
+"""---------------------------------invitation admin, staff, hotel_staff ----------------------"""
+
+class AdminInviteStaffView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != 'ADMIN':
+            return Response(
+                {"error": "Admin privileges required."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        full_name = request.data.get('full_name', '').strip()
+        email = request.data.get('email', '').strip().lower()
+        phone_number = request.data.get('phone_number', '').strip()
+        role = request.data.get('role', 'HOTEL_STAFF').upper()
+
+        if not full_name or not email:
+            return Response(
+                {"error": "Full name and email address are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if role not in ['STAFF', 'HOTEL_STAFF', 'ADMIN']:
+            return Response(
+                {"error": "Invalid staff role."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if CustomUser.objects.filter(email=email).exists():
+            return Response(
+                {"error": "An account with this email already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        name_parts = full_name.split(' ', 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ''
+
+        # Create inactive account with unusable password until invite is accepted
+        user = CustomUser.objects.create_user(
+            email=email,
+            password=None,
+            first_name=first_name,
+            last_name=last_name,
+            phone_number=phone_number,
+            role=role,
+            is_active=False,
+            is_staff=(role == 'ADMIN'),
+        )
+        user.set_unusable_password()
+        user.save()
+
+        # Generate signed, single-use onboarding link
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+        invite_link = f"{frontend_url}/set-password/{uid}/{token}"
+
+        send_mail(
+            subject='Friday Retreats - Activate Your Staff Account',
+            message=(
+                f"Hi {first_name},\n\n"
+                f"You have been invited to join the Friday Retreats Portal as {role.replace('_', ' ')}.\n\n"
+                f"Click the link below to set your password and activate your account:\n"
+                f"{invite_link}\n\n"
+                f"This link is valid for 24 hours and can only be used once."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+
+        return Response(
+            {
+                "message": "Staff invitation link sent successfully.",
+                "id": user.id,
+                "email": user.email,
+                "role": user.role,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class SetInvitedPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        uid = request.data.get('uid', '')
+        token = request.data.get('token', '')
+        new_password = request.data.get('new_password', '')
+
+        if not uid or not token or not new_password:
+            return Response(
+                {"error": "Invalid request. Missing token or password."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(new_password) < 8:
+            return Response(
+                {"error": "Password must be at least 8 characters long."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid))
+            user = CustomUser.objects.get(pk=user_id)
+        except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+            return Response(
+                {"error": "This invitation link is invalid."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not default_token_generator.check_token(user, token):
+            return Response(
+                {"error": "This invitation link has expired or has already been used."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.is_active = True
+        user.save()
+
+        return Response(
+            {"message": "Password set successfully. You can now sign in."},
+            status=status.HTTP_200_OK,
+        )
